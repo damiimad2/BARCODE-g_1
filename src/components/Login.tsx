@@ -11,7 +11,10 @@ import {
 } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import BarcodeScanner from "./BarcodeScanner";
-import { authenticateWithBarcode } from "../lib/auth";
+import {
+  authenticateWithBarcode,
+  getAuthenticatedStoreOwner,
+} from "../lib/auth";
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -26,7 +29,14 @@ const Login = ({ onLogin, onRegister }: LoginProps) => {
     customerExists: boolean,
   ) => {
     if (customerExists) {
-      const { user, error } = await authenticateWithBarcode(barcodeData);
+      // Get the authenticated store owner if available
+      const storeOwner = getAuthenticatedStoreOwner();
+
+      const { user, error } = await authenticateWithBarcode(
+        barcodeData,
+        storeOwner ? storeOwner.id : undefined,
+      );
+
       if (user) {
         onLogin(user);
       } else {

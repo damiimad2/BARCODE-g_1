@@ -65,10 +65,12 @@ interface Customer {
 
 interface StaffDashboardProps {
   customers?: Customer[];
+  storeOwnerId?: string;
 }
 
 const StaffDashboard = ({
   customers: initialCustomers,
+  storeOwnerId,
 }: StaffDashboardProps) => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -79,7 +81,7 @@ const StaffDashboard = ({
     const fetchCustomers = async () => {
       setIsLoading(true);
       try {
-        const dbCustomers = await getAllCustomers();
+        const dbCustomers = await getAllCustomers(storeOwnerId);
 
         // Map database customers to the format expected by the component
         const formattedCustomers = dbCustomers.map((customer) => ({
@@ -175,6 +177,8 @@ const StaffDashboard = ({
         customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (customer.phone &&
         customer.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (customer.barcode &&
+        customer.barcode.toLowerCase().includes(searchQuery.toLowerCase())) ||
       customer.id.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesSearch;
@@ -319,7 +323,7 @@ const StaffDashboard = ({
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
-                      placeholder="Search by name, email or phone..."
+                      placeholder="Search by name, email, phone or barcode..."
                       className="pl-8"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -407,7 +411,7 @@ const StaffDashboard = ({
                                     {customer.name}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {customer.email}
+                                    {customer.phone}
                                   </div>
                                 </div>
                               </div>
@@ -481,27 +485,6 @@ const StaffDashboard = ({
                                   }}
                                 >
                                   View
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Find the home component and navigate to profile
-                                    const homeElement = document.querySelector(
-                                      '[data-view="profile"]',
-                                    );
-                                    if (homeElement) {
-                                      // Set customer data in localStorage for editing
-                                      localStorage.setItem(
-                                        "editCustomer",
-                                        JSON.stringify(customer),
-                                      );
-                                      homeElement.click();
-                                    }
-                                  }}
-                                >
-                                  Edit
                                 </Button>
                               </div>
                             </TableCell>

@@ -7,6 +7,8 @@ import PurchaseRecorder from "./PurchaseRecorder";
 import StaffDashboard from "./StaffDashboard";
 import Login from "./Login";
 import AdminLogin from "./AdminLogin";
+import StoreOwnerLogin from "./StoreOwnerLogin";
+import AdminDashboard from "./AdminDashboard";
 import {
   getCustomerByBarcode,
   getCustomerDiscounts,
@@ -16,6 +18,8 @@ import {
 import { Database } from "../lib/database.types";
 import {
   getAuthenticatedUser,
+  getAuthenticatedStoreOwner,
+  getAuthenticatedAdmin,
   logout,
   authenticateWithBarcode,
 } from "../lib/auth";
@@ -27,13 +31,15 @@ type ActiveView =
   | "purchase"
   | "dashboard"
   | "login"
-  | "adminLogin";
+  | "adminLogin"
+  | "storeOwnerLogin"
+  | "adminDashboard";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type Discount = Database["public"]["Tables"]["discounts"]["Row"];
 
 const Home = () => {
-  const [activeView, setActiveView] = useState<ActiveView>("login");
+  const [activeView, setActiveView] = useState<ActiveView>("storeOwnerLogin");
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
@@ -41,15 +47,35 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [storeOwner, setStoreOwner] = useState<any>(null);
+  const [admin, setAdmin] = useState<any>(null);
 
-  // Check for authenticated user on load
+  // Check for authenticated users on load
   useEffect(() => {
+    // Check for authenticated customer
     const user = getAuthenticatedUser();
     if (user) {
       setIsAuthenticated(true);
       setCustomerId(user.barcode);
       setCustomerData(user);
       setActiveView("profile");
+      return;
+    }
+
+    // Check for authenticated store owner
+    const storeOwnerData = getAuthenticatedStoreOwner();
+    if (storeOwnerData) {
+      setStoreOwner(storeOwnerData);
+      setActiveView("dashboard");
+      return;
+    }
+
+    // Check for authenticated admin
+    const adminData = getAuthenticatedAdmin();
+    if (adminData) {
+      setAdmin(adminData);
+      setActiveView("adminDashboard");
+      return;
     }
   }, []);
 
@@ -111,16 +137,26 @@ const Home = () => {
       };
 
       try {
-        const newCustomer = await createCustomer(customerData);
+        // If store owner is logged in, associate customer with this store
+        const newCustomer = await createCustomer(
+          customerData,
+          storeOwner ? storeOwner.id : undefined,
+        );
+
         if (newCustomer) {
           // Auto-login after registration
-          const { user } = await authenticateWithBarcode(barcodeData);
-          if (user) {
-            setIsAuthenticated(true);
-            setCustomerId(user.barcode);
-            setCustomerData(user);
-            setActiveView("profile");
-          }
+          const { user } = await authenticateWithBarcode(
+            barcodeData,
+            storeOwner ? storeOwner.id : undefined,
+          );
+
+          // Don't log in as the customer, stay in store owner account
+          // Just set the customer data for reference
+          setCustomerId(user ? user.barcode : null);
+          setCustomerData(user || null);
+
+          // Stay in dashboard view
+          setActiveView("dashboard");
         }
       } catch (err) {
         console.error("Error auto-registering customer:", err);
@@ -163,7 +199,21 @@ const Home = () => {
     setIsAuthenticated(false);
     setCustomerId(null);
     setCustomerData(null);
-    setActiveView("login");
+    setStoreOwner(null);
+    setAdmin(null);
+    setActiveView("storeOwnerLogin");
+  };
+
+  // Handle store owner login
+  const handleStoreOwnerLogin = (storeOwnerData: any) => {
+    setStoreOwner(storeOwnerData);
+    setActiveView("dashboard");
+  };
+
+  // Handle admin login
+  const handleAdminLogin = (adminData: any) => {
+    setAdmin(adminData);
+    setActiveView("adminDashboard");
   };
 
   // Navigation functions
@@ -180,25 +230,41 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header
-        onNotificationsClick={() => {}}
-        onSettingsClick={() => {}}
-        onProfileClick={isAuthenticated ? navigateToProfile : navigateToLogin}
-        onAdminClick={() => {
-          // Force navigation to dashboard directly
-          setActiveView("dashboard");
-        }}
-        userName={customerData?.name || "Guest"}
-        userAvatarUrl={
-          customerData
-            ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${customerData.id}`
-            : undefined
-        }
-      />
+      {(storeOwner || isAuthenticated || admin) && (
+        <Header
+          onNotificationsClick={() => {}}
+          onSettingsClick={() => {}}
+          onProfileClick={isAuthenticated ? navigateToProfile : navigateToLogin}
+          onAdminClick={() => {
+            if (admin) {
+              setActiveView("adminDashboard");
+            } else {
+              setActiveView("adminLogin");
+            }
+          }}
+          userName={
+            admin
+              ? "Admin"
+              : storeOwner
+                ? storeOwner.name
+                : customerData?.name || "Guest"
+          }
+          shopName={storeOwner ? storeOwner.store_name : "Perfume Loyalty"}
+          userAvatarUrl={
+            admin
+              ? `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`
+              : storeOwner
+                ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${storeOwner.id}`
+                : customerData
+                  ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${customerData.id}`
+                  : undefined
+          }
+        />
+      )}
 
       <main className="container mx-auto px-4 py-8">
         {/* Navigation Buttons */}
-        {isAuthenticated && (
+        {(isAuthenticated || storeOwner) && (
           <div className="flex flex-wrap gap-4 mb-8">
             <button
               onClick={navigateToScanner}
@@ -228,21 +294,25 @@ const Home = () => {
               </>
             )}
 
-            <button
-              onClick={navigateToDashboard}
-              className={`px-4 py-2 rounded-md ${activeView === "dashboard" ? "bg-primary text-white" : "bg-white text-gray-800 border border-gray-200"}`}
-              data-view="dashboard"
-            >
-              Staff Dashboard
-            </button>
+            {storeOwner && (
+              <>
+                <button
+                  onClick={navigateToDashboard}
+                  className={`px-4 py-2 rounded-md ${activeView === "dashboard" ? "bg-primary text-white" : "bg-white text-gray-800 border border-gray-200"}`}
+                  data-view="dashboard"
+                >
+                  Store Dashboard
+                </button>
 
-            <button
-              onClick={navigateToRegistration}
-              className={`px-4 py-2 rounded-md ${activeView === "registration" ? "bg-primary text-white" : "bg-white text-gray-800 border border-gray-200"}`}
-              data-view="registration"
-            >
-              Register Customer
-            </button>
+                <button
+                  onClick={navigateToRegistration}
+                  className={`px-4 py-2 rounded-md ${activeView === "registration" ? "bg-primary text-white" : "bg-white text-gray-800 border border-gray-200"}`}
+                  data-view="registration"
+                >
+                  Register Customer
+                </button>
+              </>
+            )}
 
             <button
               onClick={handleLogout}
@@ -255,6 +325,20 @@ const Home = () => {
 
         {/* Active Component */}
         <div className="flex justify-center">
+          {activeView === "storeOwnerLogin" && (
+            <StoreOwnerLogin
+              onLogin={handleStoreOwnerLogin}
+              onAdminClick={() => setActiveView("adminLogin")}
+            />
+          )}
+
+          {activeView === "adminLogin" && (
+            <AdminLogin
+              onLogin={handleAdminLogin}
+              onBack={() => setActiveView("storeOwnerLogin")}
+            />
+          )}
+
           {activeView === "login" && (
             <Login
               onLogin={handleLogin}
@@ -310,11 +394,11 @@ const Home = () => {
             />
           )}
 
-          {activeView === "adminLogin" && (
-            <AdminLogin onLogin={() => setActiveView("dashboard")} />
+          {activeView === "dashboard" && storeOwner && (
+            <StaffDashboard storeOwnerId={storeOwner.id} />
           )}
 
-          {activeView === "dashboard" && <StaffDashboard />}
+          {activeView === "adminDashboard" && admin && <AdminDashboard />}
         </div>
       </main>
     </div>

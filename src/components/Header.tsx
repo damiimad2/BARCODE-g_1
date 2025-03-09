@@ -38,6 +38,20 @@ const Header = ({
       </div>
 
       <div className="flex items-center space-x-4">
+        {localStorage.getItem("adminAuthenticated") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem("adminAuthenticated");
+              localStorage.removeItem("admin");
+              window.location.reload();
+            }}
+            className="mr-2 text-red-600 hover:text-red-800 hover:bg-red-50"
+          >
+            Logout
+          </Button>
+        )}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -25,19 +25,43 @@ export async function getCustomerByBarcode(
 
 export async function createCustomer(
   customerData: Database["public"]["Tables"]["customers"]["Insert"],
+  storeOwnerId?: string,
 ): Promise<Customer | null> {
-  const { data, error } = await supabase
-    .from("customers")
-    .insert(customerData)
-    .select()
-    .maybeSingle();
+  // Add store owner ID to customer data if provided
+  const dataWithStoreOwner = storeOwnerId
+    ? { ...customerData, store_owner_id: storeOwnerId }
+    : customerData;
 
-  if (error) {
-    console.error("Error creating customer:", error);
+  try {
+    // First check if a customer with this barcode already exists
+    const { data: existingCustomer } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("barcode", customerData.barcode)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      console.error("Customer with this barcode already exists");
+      return null;
+    }
+
+    // If no existing customer, create a new one
+    const { data, error } = await supabase
+      .from("customers")
+      .insert(dataWithStoreOwner)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error creating customer:", error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Error in createCustomer:", err);
     return null;
   }
-
-  return data;
 }
 
 export async function updateCustomer(
@@ -59,11 +83,20 @@ export async function updateCustomer(
   return data;
 }
 
-export async function getAllCustomers(): Promise<Customer[]> {
-  const { data, error } = await supabase
+export async function getAllCustomers(
+  storeOwnerId?: string,
+): Promise<Customer[]> {
+  let query = supabase
     .from("customers")
     .select("*")
     .order("created_at", { ascending: false });
+
+  // If storeOwnerId is provided, filter customers by store owner
+  if (storeOwnerId) {
+    query = query.eq("store_owner_id", storeOwnerId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching customers:", error);

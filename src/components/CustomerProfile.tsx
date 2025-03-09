@@ -150,8 +150,8 @@ const CustomerProfile = ({
                     `}
                   </script>
                 </div>
-                <p className="text-sm font-mono text-gray-700 mt-1">
-                  Barcode Registration: {customer.barcode || customer.id}
+                <p className="text-sm font-mono font-medium text-gray-700 mt-1">
+                  Barcode Registration: {customer.id}
                 </p>
                 <p className="text-sm text-gray-500">
                   Customer since {customer.joinDate.toLocaleDateString()}

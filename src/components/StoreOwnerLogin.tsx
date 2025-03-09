@@ -10,17 +10,17 @@ import {
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { Lock, User } from "lucide-react";
+import { Store, Lock, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 import { supabase } from "../lib/supabase";
 
-interface AdminLoginProps {
-  onLogin: (admin: any) => void;
-  onBack: () => void;
+interface StoreOwnerLoginProps {
+  onLogin: (storeOwner: any) => void;
+  onAdminClick: () => void;
 }
 
-const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
-  const [username, setUsername] = useState("");
+const StoreOwnerLogin = ({ onLogin, onAdminClick }: StoreOwnerLoginProps) => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,27 +31,28 @@ const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
     setIsLoading(true);
 
     try {
-      // Check if the admin exists with the provided credentials
+      // Check if the store owner exists with the provided credentials
       const { data, error } = await supabase
-        .from("admins")
+        .from("store_owners")
         .select("*")
-        .eq("username", username)
+        .eq("email", email)
         .eq("password", password) // In a real app, this would use proper password hashing
+        .eq("is_active", true)
         .single();
 
       if (error || !data) {
-        setError("Invalid username or password");
+        setError("Invalid email or password");
         return;
       }
 
-      // Store admin authentication in localStorage
-      localStorage.setItem("adminAuthenticated", "true");
-      localStorage.setItem("admin", JSON.stringify(data));
+      // Store store owner authentication in localStorage
+      localStorage.setItem("storeOwnerAuthenticated", "true");
+      localStorage.setItem("storeOwner", JSON.stringify(data));
 
-      // Call the onLogin callback with the admin data
+      // Call the onLogin callback with the store owner data
       onLogin(data);
     } catch (err) {
-      console.error("Admin login error:", err);
+      console.error("Login error:", err);
       setError("An error occurred during login. Please try again.");
     } finally {
       setIsLoading(false);
@@ -63,10 +64,10 @@ const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
       <Card className="w-full">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Admin Login
+            Store Owner Login
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access the system administration
+            Enter your credentials to access your loyalty program dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -78,17 +79,18 @@ const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  id="username"
-                  placeholder="admin"
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
                   className="pl-9"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -109,13 +111,20 @@ const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login as Admin"}
+              {isLoading ? "Logging in..." : "Login to Dashboard"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            Back to Store Owner Login
+        <CardFooter className="flex justify-between">
+          <p className="text-sm text-muted-foreground">For store owners only</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1 text-gray-500 hover:text-gray-700"
+            onClick={onAdminClick}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Admin Login
           </Button>
         </CardFooter>
       </Card>
@@ -123,4 +132,4 @@ const AdminLogin = ({ onLogin, onBack }: AdminLoginProps) => {
   );
 };
 
-export default AdminLogin;
+export default StoreOwnerLogin;

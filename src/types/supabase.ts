@@ -9,7 +9,192 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admins: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          password: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          password: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          password?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          barcode: string
+          birthdate: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          loyalty_tier: string | null
+          name: string
+          phone: string | null
+          points_balance: number | null
+          store_owner_id: string | null
+          total_spent: number | null
+        }
+        Insert: {
+          address?: string | null
+          barcode: string
+          birthdate?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          loyalty_tier?: string | null
+          name: string
+          phone?: string | null
+          points_balance?: number | null
+          store_owner_id?: string | null
+          total_spent?: number | null
+        }
+        Update: {
+          address?: string | null
+          barcode?: string
+          birthdate?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          loyalty_tier?: string | null
+          name?: string
+          phone?: string | null
+          points_balance?: number | null
+          store_owner_id?: string | null
+          total_spent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_owner_id_fkey"
+            columns: ["store_owner_id"]
+            isOneToOne: false
+            referencedRelation: "store_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discounts: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string
+          expiry_date: string
+          id: string
+          is_used: boolean | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id: string
+          expiry_date: string
+          id?: string
+          is_used?: boolean | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string
+          expiry_date?: string
+          id?: string
+          is_used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string
+          discount_applied: number | null
+          id: string
+          points_earned: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id: string
+          discount_applied?: number | null
+          id?: string
+          points_earned: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string
+          discount_applied?: number | null
+          id?: string
+          points_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_owners: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          password: string
+          phone: string | null
+          store_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          password: string
+          phone?: string | null
+          store_name: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          password?: string
+          phone?: string | null
+          store_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

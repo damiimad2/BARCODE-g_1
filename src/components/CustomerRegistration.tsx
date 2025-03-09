@@ -25,7 +25,10 @@ import {
 } from "./ui/card";
 import { Alert, AlertDescription } from "./ui/alert";
 import { createCustomer, generateBarcode } from "../lib/api";
-import { authenticateWithBarcode } from "../lib/auth";
+import {
+  authenticateWithBarcode,
+  getAuthenticatedStoreOwner,
+} from "../lib/auth";
 
 // Form validation schema - only barcode is required
 const formSchema = z.object({
@@ -68,6 +71,9 @@ const CustomerRegistration = ({
       // Generate a default name based on barcode
       const customerName = `Customer ${barcode.substring(2, 6)}`;
 
+      // Get the authenticated store owner if available
+      const storeOwner = getAuthenticatedStoreOwner();
+
       // Create customer in database with minimal required info
       // Give 10 points for registration
       const customerData = {
@@ -81,7 +87,10 @@ const CustomerRegistration = ({
         birthdate: null,
       };
 
-      const newCustomer = await createCustomer(customerData);
+      const newCustomer = await createCustomer(
+        customerData,
+        storeOwner ? storeOwner.id : undefined,
+      );
 
       if (newCustomer) {
         setCustomerBarcode(barcode);
@@ -90,14 +99,8 @@ const CustomerRegistration = ({
         // Call the onRegister callback with the customer data
         onRegister(newCustomer);
 
-        // Auto-login the user if onLogin is provided
-        if (onLogin) {
-          const { user } = await authenticateWithBarcode(barcode);
-          if (user) {
-            // Wait a moment to show the barcode before logging in
-            setTimeout(() => onLogin(user), 2000);
-          }
-        }
+        // We don't need to auto-login customers anymore
+        // Just show the barcode and stay in the store owner's account
       } else {
         setError("Failed to register customer. Please try again.");
       }
